@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Flashpoint's Tag Voting System">
+    <meta property="og:description" content="Editing meta smarter, not harder.">
+    <meta property="og:image" content="favicon.png">
+    <link rel="icon" type="image/x-icon" href="./favicon.png">
+    <title>Flashpoint's Suggested Tags</title>
+    <link rel="stylesheet" href="simple.min.css">
+</head>
+<body>
+<script>
+    var game = null;
+    function getExtremeBox(){
+        var elmnt_includeExtreme = document.getElementsByName("include-extreme");
+        
+        for (var i = 0; i < elmnt_includeExtreme.length; i++) {
+            if (elmnt_includeExtreme[i].checked) {
+                return elmnt_includeExtreme[i].value;
+            }
+        }
+    }
+    function getGame(){
+        var elmnt_imgs = document.getElementById("container-imgs");
+        var elmnt_noimgs = document.getElementById("container-noimgs");
+        var extremeValue = getExtremeBox();
+        const http = new XMLHttpRequest();
+        http.open("GET", "get_game.php" + (extremeValue ? `?extreme=${extremeValue}` : ""));
+        http.send();
+        http.onload = () => {
+            if(http.status == 200 || http.status == 202){
+                game = JSON.parse(http.responseText);
+                console.log(game);
+                if(game != false){
+                    var question = document.getElementById("game-question");
+                    question.innerHTML = `Should <b>${game['title']}</b> have the <b>${game['suggestedTag']}</b> tag?`;
+                    if (game['dateAdded'] < '2021-11'){
+                        elmnt_noimgs.style.display = "none";
+                        elmnt_imgs.style.display = "flex";
+
+                        var elmnt_logo = document.getElementById("game-logo");
+                        elmnt_logo.src = `https://nul.sh/misc/flashpoint/img/Logos/${game['id'].substring(0,2)}/${game['id'].substring(2,4)}/${game['id']}.png`;
+                        var elmnt_sc = document.getElementById("game-sc");
+                        elmnt_sc.src = `https://nul.sh/misc/flashpoint/img/Screenshots/${game['id'].substring(0,2)}/${game['id'].substring(2,4)}/${game['id']}.png`;
+                    }
+                    else{
+                        elmnt_imgs.style.display = "none";
+                        elmnt_noimgs.style.display = "flex";
+                    }
+                }
+                else{
+                    var question = document.getElementById("game-question");
+                    question.innerHTML = `No games found! Seems all was done for this mode.`;
+                }
+            }
+            else{
+                var question = document.getElementById("game-question");
+                question.innerHTML = `CONNECTION ERROR`;
+            }
+        }
+    }
+    function onVote(vote){
+        const http = new XMLHttpRequest();
+        http.open("GET", `vote_game.php?id=${game['id']}&suggestedTag=${game['suggestedTag']}&vote=${vote}`);
+        http.send();
+        http.onload = () => {
+            if(http.status == 200 || http.status == 202){
+                if(http.response == "committed")
+                    getGame();
+                else{
+                    alert("Database error, prob blame the server's voting limit. Try again in a hour.");
+                }
+            }
+            else{
+                alert("Connection error when submitting vote.");
+            }
+        }
+    }
+    window.onload = function(){
+        getGame();
+    } 
+</script>
+<style>
+    .text-center{
+        text-align: center;
+    }
+    .margin-topbottom-10{
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    .game-question{
+        min-height: 60px;
+    }
+    .container-btns, .container-imgs, .container-radios{
+        display: flex;
+        justify-content: space-evenly;
+    }
+    .container-imgs, #container-noimgs {
+        height: 250px;
+    }
+    .container-imgs .img {
+        width: 45%;
+        display: flex;
+        align-items: center;
+    }
+    .container-imgs img {
+        max-width: 100%;
+        max-height: -webkit-fill-available;
+    }
+    #container-noimgs{
+        display: none;
+        align-items: center;
+    }
+    button{
+        width: 100px;
+    }
+    .btn-yes{
+        background-color: green;
+    }
+    .btn-no{
+        background-color: crimson;
+    }
+</style>
+
+<h1>Flashpoint's Suggested Tags</h1>
+<div id="game-question" class="text-center margin-topbottom-10">
+    Loading...
+</div>
+<div id="container-imgs" class="container-imgs margin-topbottom-10">
+    <div class="img"><img id="game-logo" src="" alt="Game's logo"></div>
+    <div class="img"><img id="game-sc" src="" alt="Game's screenshot"></div>
+</div>
+<div id="container-noimgs" class="container-imgs margin-topbottom-10">
+    (Upcoming game, no images yet whoops)
+</div>
+<div class="container-btns margin-topbottom-10">
+    <button type="submit" onclick="onVote('yes')" class="btn-yes">Yes</button>
+    <button type="submit" onclick="getGame()">Skip</button>
+    <button type="submit" onclick="onVote('no')" class="btn-no">No</button>
+</div>
+<div class="container-radios">
+    <label>
+        <input type="radio" name="include-extreme" value="" checked>
+        Safe mode
+    </label>
+    <label>
+        <input type="radio" name="include-extreme" value="allowed">
+        Include extreme games
+    </label>
+    <label>
+        <input type="radio" name="include-extreme" value="only">
+        Show only extreme games
+    </label>
+</div>
+<div class="text-center">
+    (You don't have to make a tag edit, that's the point of this site)
+</div>
+</body>
+</html>
